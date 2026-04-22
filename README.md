@@ -194,3 +194,6 @@ This launcher exists to:
 
 > *“If something breaks, it’s probably your fault.  
 But fine… open an issue.”*
+<p align="center">
+  <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
+</p>
