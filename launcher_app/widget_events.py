@@ -101,6 +101,7 @@ class LauncherWidgetEventsMixin:
         super().showEvent(event)
         if not self._startup_prompt_done:
             self._startup_prompt_done = True
+            self._cleanup_stale_local_server_processes()
             self.current_screen = "loading"
             self.update()
             QTimer.singleShot(900, self._finish_loading_screen)

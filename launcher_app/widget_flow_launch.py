@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +15,14 @@ from .utils import join_url, slugify
 
 
 class LauncherWidgetLaunchFlowMixin:
+    def _decode_process_output(self, payload: bytes) -> str:
+        for encoding in ("utf-8", "utf-16-le", "cp1254", "cp1252"):
+            try:
+                return payload.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        return payload.decode("utf-8", errors="replace")
+
     def _is_game_running(self, *, force_refresh: bool = False) -> bool:
         now = time.monotonic()
         if force_refresh or (now - self.game_running_last_probe) >= 1.0:
@@ -72,13 +81,92 @@ class LauncherWidgetLaunchFlowMixin:
             result = subprocess.run(
                 ["tasklist", "/FI", f"IMAGENAME eq {image_name}", "/NH"],
                 capture_output=True,
-                text=True,
                 check=False,
                 creationflags=self._background_creation_flags(),
             )
         except OSError:
             return False
-        return image_name.lower() in result.stdout.lower()
+        stdout_text = self._decode_process_output(result.stdout or b"")
+        return image_name.lower() in stdout_text.lower()
+
+    def _normalize_process_path(self, value: str | Path) -> str:
+        try:
+            return str(Path(value).resolve()).replace("/", "\\").lower()
+        except OSError:
+            return str(value).replace("/", "\\").lower()
+
+    def _runtime_process_snapshot(self) -> list[dict[str, object]]:
+        if sys.platform != "win32":
+            return []
+        command = (
+            "Get-CimInstance Win32_Process | "
+            "Select-Object ProcessId,Name,ExecutablePath,CommandLine | "
+            "ConvertTo-Json -Compress"
+        )
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", command],
+                capture_output=True,
+                check=False,
+                creationflags=self._background_creation_flags(),
+            )
+        except OSError:
+            return []
+        stdout_text = self._decode_process_output(result.stdout or b"")
+        if result.returncode != 0 or not stdout_text.strip():
+            return []
+        try:
+            payload = json.loads(stdout_text)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(payload, dict):
+            return [payload]
+        if isinstance(payload, list):
+            return [item for item in payload if isinstance(item, dict)]
+        return []
+
+    def _kill_process_id(self, pid: int) -> None:
+        if sys.platform != "win32":
+            return
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(pid), "/T", "/F"],
+                capture_output=True,
+                check=False,
+                creationflags=self._background_creation_flags(),
+            )
+        except OSError:
+            return
+
+    def _cleanup_stale_local_server_processes(self) -> None:
+        paths = self._local_server_runtime_paths()
+        expected_login = self._normalize_process_path(paths["login_exe"])
+        expected_gateway = self._normalize_process_path(paths["gateway_exe"])
+        expected_node = self._normalize_process_path(paths["node_exe"])
+        expected_authbridge = self._normalize_process_path(paths["authbridge_script"])
+
+        stale_pids: set[int] = set()
+        for process in self._runtime_process_snapshot():
+            try:
+                pid = int(process.get("ProcessId", 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            executable_path = self._normalize_process_path(process.get("ExecutablePath", "") or "")
+            command_line = self._normalize_process_path(process.get("CommandLine", "") or "")
+            if not pid or not executable_path:
+                continue
+            if executable_path in {expected_login, expected_gateway}:
+                stale_pids.add(pid)
+                continue
+            if executable_path == expected_node and expected_authbridge in command_line:
+                stale_pids.add(pid)
+
+        for pid in sorted(stale_pids):
+            self._kill_process_id(pid)
+
+        self.local_login_process = None
+        self.local_gateway_process = None
+        self.local_authbridge_process = None
 
     def _start_local_server_process(
         self,
@@ -185,6 +273,7 @@ class LauncherWidgetLaunchFlowMixin:
             proc = getattr(self, attribute_name, None)
             self._terminate_process_handle(proc)
             setattr(self, attribute_name, None)
+        self._cleanup_stale_local_server_processes()
 
     def _stop_running_game(self) -> None:
         stopped = False
@@ -197,7 +286,6 @@ class LauncherWidgetLaunchFlowMixin:
                 subprocess.run(
                     ["taskkill", "/IM", CLIENT_EXECUTABLE_NAME, "/F"],
                     capture_output=True,
-                    text=True,
                     check=False,
                     creationflags=self._background_creation_flags(),
                 )
