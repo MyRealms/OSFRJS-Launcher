@@ -9,7 +9,7 @@ import sys
 import time
 
 import requests
-from .constants import APP_DIR, CLIENT_EXECUTABLE_NAME, LOCAL_SERVER_BUNDLE_DIR, LOCAL_SERVER_RUNTIME_DIR
+from .constants import APP_DIR, CLIENT_EXECUTABLE_NAME, LOCAL_SERVER_BUNDLE_DIR, LOCAL_SERVER_PID_FILE, LOCAL_SERVER_RUNTIME_DIR
 from .models import LauncherError, LoginResult, ServerManifest, ServerProfile, ServerStatus
 from .utils import join_url, slugify
 
@@ -60,6 +60,9 @@ class LauncherWidgetLaunchFlowMixin:
         )
         if LOCAL_SERVER_RUNTIME_DIR.exists() and all(path.exists() for path in required):
             return LOCAL_SERVER_RUNTIME_DIR
+        if LOCAL_SERVER_RUNTIME_DIR == LOCAL_SERVER_BUNDLE_DIR:
+            missing = ", ".join(path.name for path in required if not path.exists())
+            raise LauncherError(f"Local server runtime is incomplete: {missing}")
         if not LOCAL_SERVER_BUNDLE_DIR.exists():
             raise LauncherError(f"Local server runtime is missing: {LOCAL_SERVER_BUNDLE_DIR}")
         shutil.copytree(LOCAL_SERVER_BUNDLE_DIR, LOCAL_SERVER_RUNTIME_DIR, dirs_exist_ok=True)
@@ -125,6 +128,47 @@ class LauncherWidgetLaunchFlowMixin:
             return [item for item in payload if isinstance(item, dict)]
         return []
 
+    def _load_local_server_pid_state(self) -> dict[str, int]:
+        if not LOCAL_SERVER_PID_FILE.exists():
+            return {}
+        try:
+            payload = json.loads(LOCAL_SERVER_PID_FILE.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        state: dict[str, int] = {}
+        for key, value in payload.items():
+            try:
+                pid = int(value)
+            except (TypeError, ValueError):
+                continue
+            if pid > 0:
+                state[str(key)] = pid
+        return state
+
+    def _save_local_server_pid_state(self, state: dict[str, int]) -> None:
+        try:
+            if state:
+                LOCAL_SERVER_PID_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+            elif LOCAL_SERVER_PID_FILE.exists():
+                LOCAL_SERVER_PID_FILE.unlink()
+        except OSError:
+            return
+
+    def _remember_local_server_pid(self, key: str, pid: int) -> None:
+        if pid <= 0:
+            return
+        state = self._load_local_server_pid_state()
+        state[key] = pid
+        self._save_local_server_pid_state(state)
+
+    def _forget_local_server_pid(self, key: str) -> None:
+        state = self._load_local_server_pid_state()
+        if key in state:
+            state.pop(key, None)
+            self._save_local_server_pid_state(state)
+
     def _kill_process_id(self, pid: int) -> None:
         if sys.platform != "win32":
             return
@@ -138,12 +182,33 @@ class LauncherWidgetLaunchFlowMixin:
         except OSError:
             return
 
+    def _local_server_path_markers(self) -> dict[str, list[str]]:
+        roots = {
+            self._normalize_process_path(LOCAL_SERVER_RUNTIME_DIR),
+            self._normalize_process_path(LOCAL_SERVER_BUNDLE_DIR),
+        }
+        roots = {root.rstrip("\\") for root in roots if root}
+        return {
+            "login": [f"{root}\\emulator\\sanctuary.login.exe" for root in roots],
+            "gateway": [f"{root}\\emulator\\sanctuary.gateway.exe" for root in roots],
+            "authbridge": [f"{root}\\authbridge\\server.mjs" for root in roots],
+            "runtime": [f"{root}\\" for root in roots],
+        }
+
     def _cleanup_stale_local_server_processes(self) -> None:
+        pid_state = self._load_local_server_pid_state()
+        for key in ("authbridge", "gateway", "login"):
+            pid = pid_state.get(key)
+            if pid:
+                self._kill_process_id(pid)
+        self._save_local_server_pid_state({})
+
         paths = self._local_server_runtime_paths()
         expected_login = self._normalize_process_path(paths["login_exe"])
         expected_gateway = self._normalize_process_path(paths["gateway_exe"])
         expected_node = self._normalize_process_path(paths["node_exe"])
         expected_authbridge = self._normalize_process_path(paths["authbridge_script"])
+        markers = self._local_server_path_markers()
 
         stale_pids: set[int] = set()
         for process in self._runtime_process_snapshot():
@@ -151,14 +216,37 @@ class LauncherWidgetLaunchFlowMixin:
                 pid = int(process.get("ProcessId", 0) or 0)
             except (TypeError, ValueError):
                 continue
+            process_name = str(process.get("Name", "") or "").strip().lower()
             executable_path = self._normalize_process_path(process.get("ExecutablePath", "") or "")
             command_line = self._normalize_process_path(process.get("CommandLine", "") or "")
-            if not pid or not executable_path:
+            if not pid:
                 continue
-            if executable_path in {expected_login, expected_gateway}:
-                stale_pids.add(pid)
-                continue
-            if executable_path == expected_node and expected_authbridge in command_line:
+
+            login_match = (
+                process_name == "sanctuary.login.exe"
+                and (
+                    executable_path == expected_login
+                    or any(marker in executable_path for marker in markers["login"])
+                    or any(marker in command_line for marker in markers["login"])
+                )
+            )
+            gateway_match = (
+                process_name == "sanctuary.gateway.exe"
+                and (
+                    executable_path == expected_gateway
+                    or any(marker in executable_path for marker in markers["gateway"])
+                    or any(marker in command_line for marker in markers["gateway"])
+                )
+            )
+            authbridge_match = (
+                process_name == "node.exe"
+                and (
+                    (executable_path == expected_node and expected_authbridge in command_line)
+                    or any(marker in command_line for marker in markers["authbridge"])
+                )
+            )
+
+            if login_match or gateway_match or authbridge_match:
                 stale_pids.add(pid)
 
         for pid in sorted(stale_pids):
@@ -185,12 +273,13 @@ class LauncherWidgetLaunchFlowMixin:
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         try:
-            return subprocess.Popen(
+            proc = subprocess.Popen(
                 command,
                 cwd=str(working_directory),
                 creationflags=self._background_creation_flags(),
                 startupinfo=startupinfo,
             )
+            return proc
         except OSError as exc:
             raise LauncherError(f"Failed to start local server component {executable.name}: {exc}") from exc
 
@@ -215,12 +304,14 @@ class LauncherWidgetLaunchFlowMixin:
                 paths["login_exe"],
                 working_directory=paths["emulator_dir"],
             )
+            self._remember_local_server_pid("login", self.local_login_process.pid)
             time.sleep(2.0)
         if not gateway_running:
             self.local_gateway_process = self._start_local_server_process(
                 paths["gateway_exe"],
                 working_directory=paths["emulator_dir"],
             )
+            self._remember_local_server_pid("gateway", self.local_gateway_process.pid)
             time.sleep(1.0)
         if not authbridge_running:
             self.local_authbridge_process = self._start_local_server_process(
@@ -228,6 +319,7 @@ class LauncherWidgetLaunchFlowMixin:
                 arguments=[str(paths["authbridge_script"])],
                 working_directory=paths["authbridge_dir"],
             )
+            self._remember_local_server_pid("authbridge", self.local_authbridge_process.pid)
 
     def _wait_for_offline_server_ready(
         self,
@@ -269,10 +361,18 @@ class LauncherWidgetLaunchFlowMixin:
             pass
 
     def _shutdown_local_server_processes(self) -> None:
-        for attribute_name in ("local_authbridge_process", "local_gateway_process", "local_login_process"):
+        for attribute_name, pid_key in (
+            ("local_authbridge_process", "authbridge"),
+            ("local_gateway_process", "gateway"),
+            ("local_login_process", "login"),
+        ):
             proc = getattr(self, attribute_name, None)
-            self._terminate_process_handle(proc)
+            if proc is not None and proc.poll() is None:
+                self._kill_process_id(proc.pid)
+            else:
+                self._terminate_process_handle(proc)
             setattr(self, attribute_name, None)
+            self._forget_local_server_pid(pid_key)
         self._cleanup_stale_local_server_processes()
 
     def _stop_running_game(self) -> None:
