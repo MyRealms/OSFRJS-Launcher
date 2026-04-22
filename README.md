@@ -1,67 +1,68 @@
-﻿<p align="center">
+<p align="center">
   <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
 </p>
-# ğŸ§™ FreeRealmsJS Launcher
 
-> *â€œAnother launcher? How original. This one at least works.â€*
+# 🧙 FreeRealmsJS Launcher
 
-Custom Free Realms launcher built with **PySide6** for offline play, OSFR login, server management, and single-file distribution.
+> *"Another launcher? How original. This one at least works."*
+
+Custom Free Realms launcher built with **PySide6** for offline play, OSFR login, server management, and portable distribution.
 
 ---
 
-## ğŸ§™â€â™‚ï¸ What is this?
+## 🧙‍♂️ What is this?
 
-> *â€œYou click button. Game starts. Revolutionary.â€*
+> *"You click button. Game starts. Revolutionary."*
 
 FreeRealmsJS Launcher is a modern, customizable launcher for running the Free Realms client with:
 
-- Offline/local server support  
-- OSFR login integration  
-- Custom server management  
+- Offline/local server support
+- OSFR login integration
+- Custom server management
 
 All wrapped in a single, clean interface.
 
 ---
 
-## ğŸ—¿ The Old OSFR Way
+## 🗿 The Old OSFR Way
 
-> *â€œBeholdâ€¦ the ritual of unnecessary suffering.â€*
+> *"Behold... the ritual of unnecessary suffering."*
 
 The classic OSFR launcher experience:
 
-1. Click `start_launcher.bat`  
-2. Nothing happens (yet)  
-3. Question reality  
-4. Click `start_server.bat`  
-5. Suddenlyâ€¦
+1. Click `start_launcher.bat`
+2. Nothing happens (yet)
+3. Question reality
+4. Click `start_server.bat`
+5. Suddenly...
 
-ğŸ’¥ **5 command prompt windows appear out of nowhere**  
-ğŸ’¥ Logs start flying  
-ğŸ’¥ Something *might* be working  
-ğŸ’¥ Something is definitely broken  
-ğŸ’¥ You have no idea which is which  
+💥 **5 command prompt windows appear out of nowhere**  
+💥 Logs start flying  
+💥 Something *might* be working  
+💥 Something is definitely broken  
+💥 You have no idea which is which
 
-> *â€œAh yesâ€¦ clarity.â€*
+> *"Ah yes... clarity."*
 
 Now you just sit there:
 
-- Waiting  
-- Watching black windows spam text  
-- Hoping you didnâ€™t summon a demon instead  
+- Waiting
+- Watching black windows spam text
+- Hoping you did not summon a demon instead
 
 Eventually:
 
-- Maybe the launcher connects  
-- Maybe it doesnâ€™t  
-- Maybe one window silently died 10 minutes ago  
+- Maybe the launcher connects
+- Maybe it does not
+- Maybe one window silently died 10 minutes ago
 
-> *â€œTruly a user-friendly experience.â€*
+> *"Truly a user-friendly experience."*
 
 ---
 
-## ğŸ§™ The FreeRealmsJS Way
+## 🧙 The FreeRealmsJS Way
 
-> *â€œOrâ€¦ you click one button like a civilized being.â€*
+> *"Or... you click one button like a civilized being."*
 
 - Press **Play**
 - No ritual
@@ -70,34 +71,35 @@ Eventually:
 
 Everything starts automatically:
 
-- Server stack âœ”  
-- Login âœ”  
-- Client âœ”  
+- Server stack ✔
+- Login ✔
+- Client ✔
 
-> *â€œSame result. Fewer existential crises.â€*
+> *"Same result. Fewer existential crises."*
 
 ---
 
-## âœ¨ Features
+## ✨ Features
 
-> *â€œYes, it has features. Try not to be overwhelmed.â€*
+> *"Yes, it has features. Try not to be overwhelmed."*
 
-- ğŸ® Custom Free Realms launcher UI (PySide6)
-- âš¡ One-click **offline/local server startup**
-- ğŸŒ **OSFR server login** support
-- ğŸ§© Custom server list (add/edit/remove)
-- ğŸ“¦ Single-file `.exe` build (PyInstaller)
-- ğŸ’¬ Discord Rich Presence
-- ğŸ¨ Themed UI with custom fonts & icons
-- ğŸ”” Built-in popup / overlay system
-- ğŸ“Š Server status display  
+- 🎮 Custom Free Realms launcher UI (PySide6)
+- ⚡ One-click **offline/local server startup**
+- 🌐 **OSFR server login** support
+- 🧩 Custom server list (add/edit/remove)
+- 📦 Portable build workflow (PyInstaller)
+- 💬 Discord Rich Presence
+- 🎨 Themed UI with custom fonts and icons
+- 🔔 Built-in popup / overlay system
+- 📊 Server status display  
   `Status: Online | Players: X`
+- 🛑 Game state detection with **Play / Stop Game**
 
 ---
 
-## ğŸ›  First-Time Setup
+## 🛠 First-Time Setup
 
-> *â€œEven you can manage this. Probably.â€*
+> *"Even you can manage this. Probably."*
 
 On first launch:
 
@@ -106,94 +108,93 @@ On first launch:
 
 ---
 
-## ğŸ¯ Modes
+## 🎯 Modes
 
-### ğŸ§ª Offline Mode
+### 🧪 Offline Mode
 
-> *â€œNo servers? No problem. Iâ€™ll just make some.â€*
+> *"No servers? No problem. I'll just make some."*
 
 Automatically starts the local stack:
 
-- Login server  
-- Gateway  
-- Auth bridge  
+- Login server
+- Gateway
+- Auth bridge
 
-â¡ï¸ One click â†’ fully local Free Realms
+➡️ One click → fully local Free Realms
 
 ---
 
-### ğŸŒ Online Mode (OSFR)
+### 🌐 Online Mode (OSFR)
 
-> *â€œAh yes, other humans. How unfortunate.â€*
+> *"Ah yes, other humans. How unfortunate."*
 
 - Login to OSFR servers
 - Built-in popup authentication system
 
 ---
 
-## ğŸŒ Server Management
+## 🌍 Server Management
 
-> *â€œControl everything. Like a responsible wizard. Or not.â€*
+> *"Control everything. Like a responsible wizard. Or not."*
 
 - Add new servers
-- Edit server name & address
+- Edit server name and address
 - Protect default profiles
 - Manage everything from the UI
 
 ---
 
-## ğŸ“Œ Current Status
+## 📌 Current Status
 
-> *â€œIt works. That already puts it above expectations.â€*
+> *"It works. That already puts it above expectations."*
 
-- âœ… Offline Mode launches full local server stack  
-- âœ… OSFR login popup implemented  
-- ğŸš§ Browser profile support (coming soonâ„¢)  
-- âœ… Server list fully manageable  
-- âœ… Game state detection (Play â†’ Stop Game)  
-- âœ… Client process detection  
+- ✅ Offline Mode launches full local server stack
+- ✅ OSFR login popup implemented
+- 🚧 Browser profile support (coming soon)
+- ✅ Server list fully manageable
+- ✅ Game state detection (Play → Stop Game)
+- ✅ Client process detection
 
 ---
 
-## âš™ï¸ Technical Details
+## ⚙️ Technical Details
 
-> *â€œMagic. Fine. Python.â€*
+> *"Magic. Fine. Python."*
 
 - Python + **PySide6**
 - Modular file structure
-- **PyInstaller (one-file build)**
-- Runtime extraction system
-- Bundled:
-  - assets  
-  - fonts  
-  - icons  
+- **PyInstaller** packaging
+- Runtime extraction / bundled asset support
+- Includes:
+  - assets
+  - fonts
+  - icons
 
 ---
 
-## ğŸ¯ Purpose
+## 🎯 Purpose
 
-> *â€œBecause the original launcher is gone. And we have standards.â€*
+> *"Because the original launcher is gone. And we have standards."*
 
 This launcher exists to:
 
-- Modernize the Free Realms launching experience  
-- Simplify offline/local server usage  
-- Manage multiple server profiles in one place  
-- Enable easy single `.exe` distribution  
+- Modernize the Free Realms launching experience
+- Simplify offline/local server usage
+- Manage multiple server profiles in one place
+- Enable easy portable distribution
 
 ---
 
-## ğŸ§ª Notes
+## 🧪 Notes
 
-> *â€œNo, this is not official. Obviously.â€*
+> *"No, this is not official. Obviously."*
 
-- Community / preservation project  
-- Free Realms officially shut down in 2014  
-- Projects like OSFR keep it alive  
+- Community / preservation project
+- Free Realms officially shut down in 2014
+- Projects like OSFR keep it alive
 
 ---
 
-## ğŸ§™ Final Words
+## 🧙 Final Words
 
-> *â€œIf something breaks, itâ€™s probably your fault.  
-But fineâ€¦ open an issue.â€*
+> *"If something breaks, it is probably your fault. But fine... open an issue."*
