@@ -197,3 +197,6 @@ But fine… open an issue.”*
 <p align="center">
   <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
 </p>
+<p align="center">
+  <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
+</p>
