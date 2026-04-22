@@ -1,14 +1,17 @@
-# 🧙 FreeRealmsJS Launcher
+﻿<p align="center">
+  <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
+</p>
+# ğŸ§™ FreeRealmsJS Launcher
 
-> *“Another launcher? How original. This one at least works.”*
+> *â€œAnother launcher? How original. This one at least works.â€*
 
 Custom Free Realms launcher built with **PySide6** for offline play, OSFR login, server management, and single-file distribution.
 
 ---
 
-## 🧙‍♂️ What is this?
+## ğŸ§™â€â™‚ï¸ What is this?
 
-> *“You click button. Game starts. Revolutionary.”*
+> *â€œYou click button. Game starts. Revolutionary.â€*
 
 FreeRealmsJS Launcher is a modern, customizable launcher for running the Free Realms client with:
 
@@ -20,9 +23,9 @@ All wrapped in a single, clean interface.
 
 ---
 
-## 🗿 The Old OSFR Way
+## ğŸ—¿ The Old OSFR Way
 
-> *“Behold… the ritual of unnecessary suffering.”*
+> *â€œBeholdâ€¦ the ritual of unnecessary suffering.â€*
 
 The classic OSFR launcher experience:
 
@@ -30,35 +33,35 @@ The classic OSFR launcher experience:
 2. Nothing happens (yet)  
 3. Question reality  
 4. Click `start_server.bat`  
-5. Suddenly…
+5. Suddenlyâ€¦
 
-💥 **5 command prompt windows appear out of nowhere**  
-💥 Logs start flying  
-💥 Something *might* be working  
-💥 Something is definitely broken  
-💥 You have no idea which is which  
+ğŸ’¥ **5 command prompt windows appear out of nowhere**  
+ğŸ’¥ Logs start flying  
+ğŸ’¥ Something *might* be working  
+ğŸ’¥ Something is definitely broken  
+ğŸ’¥ You have no idea which is which  
 
-> *“Ah yes… clarity.”*
+> *â€œAh yesâ€¦ clarity.â€*
 
 Now you just sit there:
 
 - Waiting  
 - Watching black windows spam text  
-- Hoping you didn’t summon a demon instead  
+- Hoping you didnâ€™t summon a demon instead  
 
 Eventually:
 
 - Maybe the launcher connects  
-- Maybe it doesn’t  
+- Maybe it doesnâ€™t  
 - Maybe one window silently died 10 minutes ago  
 
-> *“Truly a user-friendly experience.”*
+> *â€œTruly a user-friendly experience.â€*
 
 ---
 
-## 🧙 The FreeRealmsJS Way
+## ğŸ§™ The FreeRealmsJS Way
 
-> *“Or… you click one button like a civilized being.”*
+> *â€œOrâ€¦ you click one button like a civilized being.â€*
 
 - Press **Play**
 - No ritual
@@ -67,34 +70,34 @@ Eventually:
 
 Everything starts automatically:
 
-- Server stack ✔  
-- Login ✔  
-- Client ✔  
+- Server stack âœ”  
+- Login âœ”  
+- Client âœ”  
 
-> *“Same result. Fewer existential crises.”*
+> *â€œSame result. Fewer existential crises.â€*
 
 ---
 
-## ✨ Features
+## âœ¨ Features
 
-> *“Yes, it has features. Try not to be overwhelmed.”*
+> *â€œYes, it has features. Try not to be overwhelmed.â€*
 
-- 🎮 Custom Free Realms launcher UI (PySide6)
-- ⚡ One-click **offline/local server startup**
-- 🌐 **OSFR server login** support
-- 🧩 Custom server list (add/edit/remove)
-- 📦 Single-file `.exe` build (PyInstaller)
-- 💬 Discord Rich Presence
-- 🎨 Themed UI with custom fonts & icons
-- 🔔 Built-in popup / overlay system
-- 📊 Server status display  
+- ğŸ® Custom Free Realms launcher UI (PySide6)
+- âš¡ One-click **offline/local server startup**
+- ğŸŒ **OSFR server login** support
+- ğŸ§© Custom server list (add/edit/remove)
+- ğŸ“¦ Single-file `.exe` build (PyInstaller)
+- ğŸ’¬ Discord Rich Presence
+- ğŸ¨ Themed UI with custom fonts & icons
+- ğŸ”” Built-in popup / overlay system
+- ğŸ“Š Server status display  
   `Status: Online | Players: X`
 
 ---
 
-## 🛠 First-Time Setup
+## ğŸ›  First-Time Setup
 
-> *“Even you can manage this. Probably.”*
+> *â€œEven you can manage this. Probably.â€*
 
 On first launch:
 
@@ -103,11 +106,11 @@ On first launch:
 
 ---
 
-## 🎯 Modes
+## ğŸ¯ Modes
 
-### 🧪 Offline Mode
+### ğŸ§ª Offline Mode
 
-> *“No servers? No problem. I’ll just make some.”*
+> *â€œNo servers? No problem. Iâ€™ll just make some.â€*
 
 Automatically starts the local stack:
 
@@ -115,22 +118,22 @@ Automatically starts the local stack:
 - Gateway  
 - Auth bridge  
 
-➡️ One click → fully local Free Realms
+â¡ï¸ One click â†’ fully local Free Realms
 
 ---
 
-### 🌐 Online Mode (OSFR)
+### ğŸŒ Online Mode (OSFR)
 
-> *“Ah yes, other humans. How unfortunate.”*
+> *â€œAh yes, other humans. How unfortunate.â€*
 
 - Login to OSFR servers
 - Built-in popup authentication system
 
 ---
 
-## 🌍 Server Management
+## ğŸŒ Server Management
 
-> *“Control everything. Like a responsible wizard. Or not.”*
+> *â€œControl everything. Like a responsible wizard. Or not.â€*
 
 - Add new servers
 - Edit server name & address
@@ -139,22 +142,22 @@ Automatically starts the local stack:
 
 ---
 
-## 📌 Current Status
+## ğŸ“Œ Current Status
 
-> *“It works. That already puts it above expectations.”*
+> *â€œIt works. That already puts it above expectations.â€*
 
-- ✅ Offline Mode launches full local server stack  
-- ✅ OSFR login popup implemented  
-- 🚧 Browser profile support (coming soon™)  
-- ✅ Server list fully manageable  
-- ✅ Game state detection (Play → Stop Game)  
-- ✅ Client process detection  
+- âœ… Offline Mode launches full local server stack  
+- âœ… OSFR login popup implemented  
+- ğŸš§ Browser profile support (coming soonâ„¢)  
+- âœ… Server list fully manageable  
+- âœ… Game state detection (Play â†’ Stop Game)  
+- âœ… Client process detection  
 
 ---
 
-## ⚙️ Technical Details
+## âš™ï¸ Technical Details
 
-> *“Magic. Fine. Python.”*
+> *â€œMagic. Fine. Python.â€*
 
 - Python + **PySide6**
 - Modular file structure
@@ -167,9 +170,9 @@ Automatically starts the local stack:
 
 ---
 
-## 🎯 Purpose
+## ğŸ¯ Purpose
 
-> *“Because the original launcher is gone. And we have standards.”*
+> *â€œBecause the original launcher is gone. And we have standards.â€*
 
 This launcher exists to:
 
@@ -180,9 +183,9 @@ This launcher exists to:
 
 ---
 
-## 🧪 Notes
+## ğŸ§ª Notes
 
-> *“No, this is not official. Obviously.”*
+> *â€œNo, this is not official. Obviously.â€*
 
 - Community / preservation project  
 - Free Realms officially shut down in 2014  
@@ -190,13 +193,7 @@ This launcher exists to:
 
 ---
 
-## 🧙 Final Words
+## ğŸ§™ Final Words
 
-> *“If something breaks, it’s probably your fault.  
-But fine… open an issue.”*
-<p align="center">
-  <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
-</p>
-<p align="center">
-  <img src="banner/banner.jpg" alt="FreeRealmsJS Launcher Banner" width="100%">
-</p>
+> *â€œIf something breaks, itâ€™s probably your fault.  
+But fineâ€¦ open an issue.â€*
