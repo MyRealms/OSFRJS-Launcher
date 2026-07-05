@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtCore import QRectF, QTimer
 from PySide6.QtGui import QPainter
 
 from .widget_render import PPT_CX, PPT_CY
+
+LOGGER = logging.getLogger("osfr_launcher")
 
 
 class LauncherWidgetEventsMixin:
@@ -39,6 +43,13 @@ class LauncherWidgetEventsMixin:
         self._sync_overlay_widgets(content_rect)
 
     def _handle_click_region(self, region_type: str, payload: str) -> bool:
+        LOGGER.info(
+            "UI click: screen=%s overlay=%s region=%s payload=%s",
+            self.current_screen,
+            self.overlay_kind,
+            region_type,
+            payload,
+        )
         if region_type == "menu":
             self.selected_menu = int(payload)
             self.menu_highlight_target = float(self.selected_menu)
@@ -59,12 +70,20 @@ class LauncherWidgetEventsMixin:
             self._submit_setup_form(settings_mode=payload == "settings")
         elif region_type == "setup_reset":
             self._reset_launcher_settings()
+        elif region_type == "open_config_folder":
+            self._open_config_folder()
+        elif region_type == "cancel_launch":
+            self.cancel_launch()
         elif region_type == "overlay_submit":
             self._submit_overlay()
         elif region_type == "overlay_cancel":
             self._close_overlay()
+        elif region_type == "overlay_back":
+            self._close_overlay()
         elif region_type == "overlay_alt":
             self._submit_overlay_alt()
+        elif region_type == "overlay_select_icon":
+            self._select_overlay_icon(payload)
         elif region_type == "overlay_toggle":
             self._toggle_overlay_flag(payload)
         elif region_type == "overlay_link":
@@ -101,16 +120,22 @@ class LauncherWidgetEventsMixin:
         super().showEvent(event)
         if not self._startup_prompt_done:
             self._startup_prompt_done = True
+            LOGGER.info("Launcher widget showEvent startup initialization")
             self._cleanup_stale_local_server_processes()
             self.current_screen = "loading"
             self.update()
             QTimer.singleShot(900, self._finish_loading_screen)
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        LOGGER.info("Launcher widget closeEvent")
         self._shutdown_local_server_processes()
         super().closeEvent(event)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
+        self._wake_animation()
+        # A click is a user interaction, so it's a good moment to do the
+        # expensive process check and refresh the play/stop button state.
+        self._is_game_running(force_refresh=True)
         point = event.position()
         if self.current_screen == "main" and self.overlay_kind is None:
             thumb_rect = self._menu_scrollbar_thumb_rect(self._content_rect())
@@ -119,6 +144,11 @@ class LauncherWidgetEventsMixin:
                 self.menu_scroll_drag_offset = point.y() - thumb_rect.y()
                 self.update()
                 return
+            priority_regions = {"settings", "add_server", "play", "menu_edit", "external_url"}
+            for region_type, payload, rect in self.click_regions:
+                if region_type in priority_regions and rect.contains(point):
+                    if self._handle_click_region(region_type, payload):
+                        return
         for region_type, payload, rect in self.click_regions:
             if rect.contains(point):
                 if self._handle_click_region(region_type, payload):
@@ -182,7 +212,29 @@ class LauncherWidgetEventsMixin:
                 if max_scroll > 0.0:
                     delta_steps = event.angleDelta().y() / 120.0
                     self.menu_scroll_offset = min(max(0.0, self.menu_scroll_offset - (delta_steps * 54.0)), max_scroll)
+                    LOGGER.info("Sidebar wheel scroll: offset=%.2f max=%.2f", self.menu_scroll_offset, max_scroll)
                     self.update()
                     event.accept()
                     return
+        if self.overlay_kind == "server_profile":
+            from .server_icons import available_icons
+
+            content_rect = self._content_rect()
+            layout = self._overlay_layout(content_rect)
+            strip_rect = layout.get("icon_strip")
+            icons = available_icons()
+            if strip_rect is not None and strip_rect.contains(event.position()) and icons:
+                thumb_size = 64.0
+                thumb_gap = 10.0
+                slot = thumb_size + thumb_gap
+                visible_count = max(1, int((strip_rect.width() + thumb_gap) / slot))
+                max_scroll = max(0.0, (len(icons) - visible_count) * slot)
+                delta_steps = event.angleDelta().y() / 120.0
+                self.overlay_icon_strip_scroll = min(
+                    max(0.0, self.overlay_icon_strip_scroll + (delta_steps * slot)),
+                    max_scroll,
+                )
+                self.update()
+                event.accept()
+                return
         super().wheelEvent(event)

@@ -14,7 +14,6 @@ class MenuProfileMeta:
 MENU_ITEMS = [
     MenuProfileMeta("offline_mode", "Offline Mode", "Local Server"),
     MenuProfileMeta("osfr_server", "OSFR Server", "Multiplayer"),
-    MenuProfileMeta("freerealmsjs", "FreeRealmsJS", "Browser"),
 ]
 
 
@@ -33,6 +32,11 @@ class ServerProfile:
     password: str = ""
     remember_username: bool = False
     remember_password: bool = False
+    icon_name: str = ""
+    # Name of the client container (folder under <APP_DIR>/Client/) this
+    # server should use. Empty string means "use the default golden client
+    # (OSFR - Original)".
+    client_container: str = ""
 
     @classmethod
     def from_mapping(cls, key: str, meta: MenuProfileMeta, payload: dict[str, Any]) -> ServerProfile:
@@ -50,6 +54,8 @@ class ServerProfile:
             password=str(payload.get("password", "")),
             remember_username=bool(payload.get("remember_username", False)),
             remember_password=bool(payload.get("remember_password", False)),
+            icon_name=str(payload.get("icon_name", "")).strip(),
+            client_container=str(payload.get("client_container", "")).strip(),
         )
 
 
@@ -89,4 +95,9 @@ class ServerStatus:
 
 
 class LauncherError(Exception):
+    pass
+
+
+class LaunchCancelled(Exception):
+    """Raised to unwind the launch flow when the user cancels it."""
     pass

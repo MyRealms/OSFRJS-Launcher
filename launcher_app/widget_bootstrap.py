@@ -7,6 +7,7 @@ from PySide6.QtCore import QRectF, QTimer
 from PySide6.QtWidgets import QApplication, QLineEdit
 
 from .constants import APP_DIR, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, RESOURCE_DIR
+from .crash_server import CrashServer
 from .settings import LauncherSettings
 
 
@@ -17,6 +18,7 @@ class LauncherWidgetBootstrapMixin:
         self._initialize_widget_state()
         self._create_overlay_widgets()
         self._start_animation_timer()
+        self._start_crash_server()
 
     def _configure_window(self) -> None:
         self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
@@ -75,14 +77,27 @@ class LauncherWidgetBootstrapMixin:
         self.client_process: subprocess.Popen[str] | None = None
         self.local_login_process: subprocess.Popen[str] | None = None
         self.local_gateway_process: subprocess.Popen[str] | None = None
+        self.local_webapi_process: subprocess.Popen[str] | None = None
         self.local_authbridge_process: subprocess.Popen[str] | None = None
         self.hash_warning_shown = False
         self._startup_prompt_done = False
+        # Set when the user requests cancellation of the current launch/download flow.
+        self.launch_cancelled = False
+        self.is_launching = False
+        # Used to detect a new client crash (G-code) after the game exits.
+        self._active_client_dir = None
+        self._crash_log_mtime = 0.0
+        # Tiny in-process HTTP server that serves the local crash banner.
+        # ``GameCrashUrl=`` in the client config is rewritten to point at
+        # this so any browser window the client pops on a G error is
+        # always the small, local, launcher-branded page.
+        self.crash_server = CrashServer()
         self.setup_display_name = self.settings.display_name
         self.setup_game_path = self.settings.game_path
         self.frame_tick = 0
         self.loading_tick = 0
         self.hero_background_index = 0
+        self.hero_background_last_switch = time.monotonic()
         self.main_intro_tick = 42
         self.main_outro_tick = 14
         self.settings_transition_pending = False
@@ -110,6 +125,10 @@ class LauncherWidgetBootstrapMixin:
         self.overlay_intro_tick = 12
         self.overlay_remember_username = False
         self.overlay_remember_password = False
+        self.overlay_icon_name = ""
+        self.overlay_icon_strip_scroll = 0.0
+        self._overlay_snapshot = None
+        self.pending_update_url: str | None = None
         self.server_status_profile_key = ""
         self.server_status_name = ""
         self.server_status_description = ""
@@ -123,12 +142,45 @@ class LauncherWidgetBootstrapMixin:
         self.server_status_last_requested = 0.0
         self.server_status_last_rendered_key = ""
         self.server_status_boot_time = time.monotonic()
+        self.scaled_pixmap_cache: dict[tuple[int, int, int, str], object] = {}
+
+    # Frame interval (ms) while animations are actively running vs. idle.
+    ANIM_INTERVAL_ACTIVE = 16
+    ANIM_INTERVAL_IDLE = 150
 
     def _start_animation_timer(self) -> None:
         self.anim_timer = QTimer(self)
-        self.anim_timer.setInterval(16)
+        self.anim_timer.setInterval(self.ANIM_INTERVAL_ACTIVE)
         self.anim_timer.timeout.connect(self._tick_animation)
         self.anim_timer.start()
+
+    def _start_crash_server(self) -> None:
+        """Bind the local crash server before the user clicks Play.
+
+        The server only listens on 127.0.0.1 so it's never exposed to
+        the network. If binding fails (port collision, sandbox), the
+        launcher keeps working; ``disable_crash_url`` will fall back to
+        leaving ``GameCrashUrl=`` untouched and a real browser window
+        may pop on a G error.
+        """
+        try:
+            url = self.crash_server.start()
+        except OSError:
+            self.crash_server = CrashServer()  # discard the broken instance
+            return
+        # Expose the URL on a simple attribute so the launch flow can
+        # read it without going through self.crash_server.url every time.
+        self.crash_url = url
+
+    def _wake_animation(self) -> None:
+        """Force the animation timer back to full frame rate immediately.
+
+        Call this from interaction handlers that kick off a new animation so it
+        starts smoothly instead of waiting out the idle interval.
+        """
+        timer = getattr(self, "anim_timer", None)
+        if timer is not None and timer.interval() != self.ANIM_INTERVAL_ACTIVE:
+            timer.setInterval(self.ANIM_INTERVAL_ACTIVE)
 
     def _create_overlay_widgets(self) -> None:
         self.setup_name_edit = QLineEdit(self)

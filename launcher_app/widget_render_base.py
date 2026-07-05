@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import QColor, QFontMetricsF, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
 PPT_CX = 11520488
@@ -11,6 +11,33 @@ PPT_CY = 7199313
 
 
 class LauncherWidgetRenderBaseMixin:
+    def _elide_text(self, painter: QPainter, text: str, max_width: float) -> str:
+        """Truncate text with an ellipsis so it never overflows max_width.
+
+        Uses the painter's currently configured font, so callers must set the
+        font before calling this.
+        """
+        if not text:
+            return text
+        metrics = QFontMetricsF(painter.font())
+        if metrics.horizontalAdvance(text) <= max_width:
+            return text
+        return metrics.elidedText(text, Qt.ElideRight, int(max_width))
+    def _scaled_pixmap(self, pixmap: QPixmap, rect: QRectF, mode: str) -> QPixmap:
+        target_size = rect.size().toSize()
+        if pixmap.isNull() or target_size.width() <= 0 or target_size.height() <= 0:
+            return QPixmap()
+        cache_key = (int(pixmap.cacheKey()), target_size.width(), target_size.height(), mode)
+        cached = self.scaled_pixmap_cache.get(cache_key)
+        if isinstance(cached, QPixmap) and not cached.isNull():
+            return cached
+        aspect_mode = Qt.KeepAspectRatioByExpanding if mode == "cover" else Qt.KeepAspectRatio
+        scaled = pixmap.scaled(target_size, aspect_mode, Qt.SmoothTransformation)
+        self.scaled_pixmap_cache[cache_key] = scaled
+        if len(self.scaled_pixmap_cache) > 48:
+            self.scaled_pixmap_cache = dict(list(self.scaled_pixmap_cache.items())[-32:])
+        return scaled
+
     def _stage_progress(self, progress: float, start: float, end: float) -> float:
         if progress <= start:
             return 0.0
@@ -56,27 +83,24 @@ class LauncherWidgetRenderBaseMixin:
         path = QPainterPath()
         if radius > 0:
             path.addRoundedRect(rect, radius, radius)
-            painter.setClipPath(path)
-
-        source = QRectF(pixmap.rect())
-        pixmap_ratio = pixmap.width() / max(1, pixmap.height())
-        target_ratio = rect.width() / max(1.0, rect.height())
-        if pixmap_ratio > target_ratio:
-            target_width = pixmap.height() * target_ratio
-            source.setX((pixmap.width() - target_width) / 2.0)
-            source.setWidth(target_width)
         else:
-            target_height = pixmap.width() / max(target_ratio, 0.001)
-            source.setY((pixmap.height() - target_height) / 2.0)
-            source.setHeight(target_height)
+            path.addRect(rect)
+        painter.setClipPath(path)
 
-        painter.drawPixmap(rect, pixmap, source)
+        target = self._scaled_pixmap(pixmap, rect, "cover")
+        draw_rect = QRectF(
+            rect.x() + (rect.width() - target.width()) / 2.0,
+            rect.y() + (rect.height() - target.height()) / 2.0,
+            target.width(),
+            target.height(),
+        )
+        painter.drawPixmap(draw_rect.topLeft(), target)
         painter.restore()
 
     def _draw_contain_pixmap(self, painter: QPainter, rect: QRectF, pixmap: QPixmap) -> None:
         if pixmap.isNull():
             return
-        target = pixmap.scaled(rect.size().toSize(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        target = self._scaled_pixmap(pixmap, rect, "contain")
         draw_rect = QRectF(
             rect.x() + (rect.width() - target.width()) / 2.0,
             rect.y() + (rect.height() - target.height()) / 2.0,

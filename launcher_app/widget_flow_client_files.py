@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
 from pathlib import Path
 
 import requests
 
 from .constants import DOWNLOAD_TIMEOUT
-from .models import ClientFileEntry, ClientFolderEntry, ServerProfile
+from .models import ClientFileEntry, ClientFolderEntry, LaunchCancelled, ServerProfile
 from .utils import join_url
 
 try:
@@ -14,16 +15,21 @@ try:
 except ImportError:
     xxhash = None
 
+LOGGER = logging.getLogger("osfr_launcher")
+
 
 class LauncherWidgetClientFilesFlowMixin:
     def _verify_client_files(self, profile: ServerProfile, root_folder: ClientFolderEntry) -> None:
         files_to_download = self._collect_missing_files(profile, root_folder)
+        LOGGER.info("Client file verification: profile=%s missing_files=%s", profile.key, len(files_to_download))
         if not files_to_download:
             return
 
         total = len(files_to_download)
         if not self.settings.parallel_download or total == 1:
             for index, (relative_path, entry) in enumerate(files_to_download, start=1):
+                if getattr(self, "launch_cancelled", False):
+                    raise LaunchCancelled()
                 self._set_status_screen("Warming", f"Preparing game files ({index}/{total})", animate_detail=False)
                 self._download_file(profile, relative_path, entry.name)
             return
@@ -35,9 +41,18 @@ class LauncherWidgetClientFilesFlowMixin:
                 executor.submit(self._download_file, profile, relative_path, entry.name)
                 for relative_path, entry in files_to_download
             ]
-            for index, future in enumerate(as_completed(futures), start=1):
-                future.result()
-                self._set_status_screen("Warming", f"Preparing game files ({index}/{total}) with {max_workers} threads", animate_detail=False)
+            try:
+                for index, future in enumerate(as_completed(futures), start=1):
+                    future.result()
+                    if getattr(self, "launch_cancelled", False):
+                        # Stop scheduling further work and abort the remaining downloads.
+                        for pending in futures:
+                            pending.cancel()
+                        raise LaunchCancelled()
+                    self._set_status_screen("Warming", f"Preparing game files ({index}/{total}) with {max_workers} threads", animate_detail=False)
+            except LaunchCancelled:
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
 
     def _collect_missing_files(
         self,
@@ -85,10 +100,24 @@ class LauncherWidgetClientFilesFlowMixin:
         target_dir = self._client_directory(profile) / relative_path if relative_path else self._client_directory(profile)
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / file_name
+        LOGGER.info("Downloading client file: %s -> %s", url, target_path)
 
-        with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT) as response:
-            response.raise_for_status()
-            with target_path.open("wb") as handle:
-                for chunk in response.iter_content(chunk_size=1024 * 256):
-                    if chunk:
-                        handle.write(chunk)
+        # Download to a temporary file and atomically replace the target so an
+        # interrupted download never leaves a corrupt file in the client directory.
+        temp_path = target_path.with_suffix(target_path.suffix + ".part")
+        try:
+            with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT) as response:
+                response.raise_for_status()
+                with temp_path.open("wb") as handle:
+                    for chunk in response.iter_content(chunk_size=1024 * 256):
+                        if chunk:
+                            handle.write(chunk)
+            temp_path.replace(target_path)
+        except BaseException:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
+            raise
+        LOGGER.info("Downloaded client file complete: %s", target_path)

@@ -85,3 +85,4 @@ class LauncherWidgetRenderContentMixin:
             info_line,
         )
         painter.restore()
+        painter.restore()

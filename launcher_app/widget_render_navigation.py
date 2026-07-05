@@ -19,9 +19,6 @@ class LauncherWidgetRenderNavigationMixin:
         slot_height = 760000.0 * scale_y
         gap = 100000.0 * scale_y
         profile_count = len(self._sidebar_profiles())
-        if profile_count > 1:
-            fill_gap = (view_rect.height() - (profile_count * slot_height)) / (profile_count - 1)
-            gap = max(gap, fill_gap)
         total_height = (profile_count * slot_height) + (max(0, profile_count - 1) * gap)
         max_scroll = max(0.0, total_height - view_rect.height())
         self.menu_scroll_offset = min(max(0.0, self.menu_scroll_offset), max_scroll)
@@ -41,15 +38,17 @@ class LauncherWidgetRenderNavigationMixin:
             return ["Local Server", "Offline Mode"]
         if profile.key == "osfr_server":
             return ["Online Server", "OSFR"]
-        if profile.key == "freerealmsjs":
-            return ["Browser", "FreeRealmsJS"]
         return [profile.subtitle or "Custom Server", profile.title or profile.name or "Custom Server"]
 
     def _menu_icon_for_profile(self, profile):
+        from .server_icons import load_icon_pixmap
+
         if profile.key == "offline_mode":
             return self.local_icon_svg
-        if profile.key == "freerealmsjs":
-            return self.browser_icon_svg
+        if profile.icon_name:
+            pixmap = load_icon_pixmap(profile.icon_name)
+            if not pixmap.isNull():
+                return pixmap
         return self.online_icon_svg
 
     def _menu_item_rects(self, content_rect: QRectF) -> list[QRectF]:
@@ -130,7 +129,8 @@ class LauncherWidgetRenderNavigationMixin:
 
         for line in lines:
             line_rect = QRectF(rect.x(), y, rect.width(), line_height + 4)
-            painter.drawText(line_rect, Qt.AlignLeft | Qt.AlignVCenter, line)
+            elided = self._elide_text(painter, line, rect.width())
+            painter.drawText(line_rect, Qt.AlignLeft | Qt.AlignVCenter, elided)
             y += line_height + line_gap
 
         painter.restore()
@@ -165,7 +165,11 @@ class LauncherWidgetRenderNavigationMixin:
         font.setFamily(self.display_font_family)
         font.setPixelSize(32)
         painter.setFont(font)
-        painter.drawText(username_rect, Qt.AlignLeft | Qt.AlignVCenter, username)
+        painter.drawText(
+            username_rect,
+            Qt.AlignLeft | Qt.AlignVCenter,
+            self._elide_text(painter, username, username_rect.width()),
+        )
 
         profiles = self._sidebar_profiles()
         menu_rects = self._menu_item_rects(content_rect)
@@ -176,15 +180,20 @@ class LauncherWidgetRenderNavigationMixin:
             item_rect = menu_rects[index]
             if not item_rect.intersects(view_rect):
                 continue
-            icon_svg = self._menu_icon_for_profile(profile)
+            icon_asset = self._menu_icon_for_profile(profile)
             icon_rect = QRectF(
                 item_rect.x() + (60960 * (content_rect.width() / 11520488)),
                 item_rect.center().y() - (535543 * (content_rect.height() / 7199313) / 2.0),
                 586547 * (content_rect.width() / 11520488),
                 535543 * (content_rect.height() / 7199313),
             )
-            if icon_svg and icon_svg.isValid():
-                icon_svg.render(painter, icon_rect)
+            from PySide6.QtGui import QPixmap
+
+            if isinstance(icon_asset, QPixmap) and not icon_asset.isNull():
+                # Custom PNG icon — draw with cover semantics so it fills the slot.
+                self._draw_cover_pixmap(painter, icon_rect, icon_asset)
+            elif icon_asset and getattr(icon_asset, "isValid", lambda: False)():
+                icon_asset.render(painter, icon_rect)
             else:
                 self._draw_nav_icon(painter, icon_rect, QColor("#7B7B7B"))
 
